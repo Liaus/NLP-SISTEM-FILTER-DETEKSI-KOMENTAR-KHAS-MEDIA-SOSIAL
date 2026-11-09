@@ -1,0 +1,70 @@
+NLP COMMENT DETECTION — DATA QUALITY AUDIT
+================================================
+Source file: D:\PROJECT KULIAH\NLP\data\raw\dataset_github.tsv
+Source shape: 300 rows x 3 columns
+Source columns: no, text, label
+Source text column: text
+Missing values by column: {'no': 0, 'text': 0, 'label': 0}
+Whitespace-only text rows: 0
+Full-row duplicates: 0
+Raw source label counts: {'toksik': 150, 'aman': 150}
+Usable rows after validation, preprocessing, and same-label duplicate removal: 299
+Prepared label counts: {'toksik': 150, 'aman': 149}
+Rows participating in exact-text duplicates: 2
+Unique duplicated texts: 1
+Exact text values with conflicting labels: 0
+Duplicate text examples (same-label repeats, shown for audit):
+- [aman] @fadlizon Knp bukan Om Fadli Zon saja yg maju cawapres 
+
+Representative examples by original normalized label (not independently re-labeled):
+
+AMAN:
+- '@fadlizon @jokowi Ngeritik ko tiap hari 
+- @fadlizon @jokowi @INFOBNN Sudah sampai jauh kedesa-desa 
+- @fadlizon @jokowi Kalau gak ada penjaga tidak mungkin di tangkap pak 
+- @fadlizon @jokowi @INFOBNN Om.. kok 1 juta ton ??. Hayoooi bener gak tuh datanya ?? 
+- @fadlizon @jokowi Pak kan baru jaman sekarang di galakan Brantas narkoba jadi para cukong nya baru ketangkep 
+- @GendonRamsay Gue pengen ngambil bingkai foto fadli zon aja deh. Bakal bangga gak ya 
+- @kompascom Kalau Fadli Zon sendiri ? Anggota DPR Apa ya ??? 
+- @utangmeroket @ustadtengkuzul Fahri hamzah - Fadli zon Mantep nih.. 
+
+TOKSIK:
+- Klo fadli zon goblok, boleeeh? 
+- @detikcom Jangan nyinyirin pak fadli zon, dia gitu2 punya prestasi mecahin rekor muri batu akik..hehe 
+- @ahmadwaluy @bravo1282 @fadlizon Kritik siapa bisa di penjara? Fadli zon? Kritik presiden aja dia ga di penjara. Zon kerja buat rakyat mas, kalah ama pelacur. Pelacur di katain pelacur aja ga marah mas. 
+-  @fadlizon @jokowi Hati penuh dendam,  pikiran selalu negatif, mata hati tertutup yg dilihat selalu agak kurang tepat, saya melihat wajar atas penglihatan pak son. 
+- @fadlizon @jokowi Kerja anda apa zon bisanya cuma nyinyi r aja, semoga masyarakat indonesia untk berikutnya tdk memilih org yg bisanya nyinyir 
+- @fadlizon Fadli zon wakil rakyat bento otaknya udah rusak 
+- @Yayan_Anjasmara @fadlizon @jokowi Klau tong kosong kan gtu asal bunyi 
+- @fadlizon Koq gak pak fadli zon yg maju?? Kan bapak hebat soal kritik 
+
+Potential label-review examples (keyword search only; NOT confirmed errors):
+Positive-sounding cues found in toksik-labeled source comments:
+- [toksik] @fadlizon Koq gak pak fadli zon yg maju?? Kan bapak hebat soal kritik 
+- [toksik] @fadlizon @jokowi WAKIL KETUA DPR KOK BISANYA CUMA NGOCEH DI TWITTER, KASIH MASUKAN KE PEMERINTAH GIMANA YANG SEHARUSNYA SUPAYA LEBIH BAIK. MULUT ENTE ITU MEWAKILI JUTAAN MASYARAKAT INDONESIA, MANFAATIN YANG BENER DONG JANGAN CUMA NGOMONG SAMPAH MULU.  KLO CUMA NGOCEH DI TWITTER GW JUGA BISA 
+- [toksik] @jokowi Walaupun fahri hamza fadli zon dan amin rais nyinyir terus karna iri hati dengki cemburu ABAIKAN SAJA TRIO MULUT COMBERAN INI mereka manusia yg belum ada prestasinya untuk bangsa dan negara 
+- [toksik] Wkwk lucu nih Bang Fadli Zon di mata najwa. Baik sangka: husnudzon Buruk sangka: suudzon Selalu mengkritik tapi gamau dikritik: Fadlizon 
+- [toksik] Sampai kapanpun, sebelum Prabowo berkuasa Fadli Zon tidak akan pernah berhenti ngebacot sampai dower. bahkan jika pun Prabowo menjadi penguasa, bacot Fadli Zon akan semakin meraja lela. sebaiknya memang Fadli zon harus ditendang keluar dari DPR!! 
+- [toksik] @fadlizon @jokowi tuh bnn sibuk basmi.. bikin UU yg permudah kinerja mereka lah pak..ngeluh mulu..bisa bikin UU buat perbaikin negeri malah ngelah ngeluh..malu sama jabatan pak 
+- [toksik] @fadlizon @jokowi Siapa yg bilang leluasa ZONO...., penjaga negri sudah bekerja dengan baik dengan menangkap mereka tanpa banyak nyinyir di medsos 
+- [toksik] @NdaruTejowati @fadlizon @jokowi Harusnya kita bangga krn jauh lbh hebat..... narkoba kan Dr negara lain transit dr bandara 1 ke bandara yg lain otomatis di bandara dpriksa knp bs lolos ga trdeteksi tp disini kecium n trtahan..apa ga hebat Negri INI?... mikir secara rasional dong om zonk 
+Negative-sounding cues found in aman-labeled source comments:
+- [aman] @fadlizon @jokowi Hehehe. Topik hari ini narkoba nih? Hebat euy si Bapak. Tiap hari ada aja yang dibahas. Jempolan lah. Emang gampang sih Pak ngomingin kelemahan orang. Jelek dicerca. Bagus tak jadi bahan berita. - pandji 
+- [aman] @AbdulDikdik @fadlizon Yang terpenting adalah terus bergerak mencapai garis finish meskipun dengan tertatih daripada hanya diam di garis start saat yang lain berlari kencang menuju garis finish 
+- [aman] @fadlizon @jokowi Keadaan "reaksi dingin" sang penjaga may be karena belajar dari sebuah saran yg berkata: jangan lakukan banyak program hanya utk sebuah pencitraan. Jadi daripada dibilang pencitraan lebih baik "diam" terima kasih sudah memberikan saran yg baik 
+- [aman] @fadlizon Ya kan polisi sdh punya UU ujaran kebencian, wajarlah orang penyebar hoax n fitnah ditangkap.jd inget kasus sperti tabloit obor rakyat yg dikomandanani  setiardi budiono..! Masak kasus sperti ini mau di diamkan.? ingatkan obor rakyat peliharaan siapa dan dibiayai siapa.! 
+These are context-dependent candidates for human inspection only. No source label was changed.
+
+Preprocessing examples (raw input -> current output):
+- kamu ganteng banget -> kamu ganteng banget
+- kamu cantik banget -> kamu cantik banget
+- kamu tidak berguna -> kamu tidak berguna
+- lebih baik kamu diam saja -> lebih baik kamu diam
+- dasar tidak tahu diri -> dasar tidak tahu diri
+- terima kasih banyak -> terima kasih banyak
+
+Preprocessing audit findings:
+- Negation words (tidak, bukan, jangan), degree/qualification words (kurang, sangat, lebih), and addressees (kamu, saya) are preserved.
+- Sastrawi stemming is not applied; it previously reduced interpretable forms such as 'berguna' and 'memalukan'.
+- Raw comments are preprocessed once by the same function for training and inference. Preprocessed-only input files are read as-is.
+- The dataset is small and topic-specific; sentiment-positive words can occur sarcastically in toksik comments.

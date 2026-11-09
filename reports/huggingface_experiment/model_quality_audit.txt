@@ -1,0 +1,150 @@
+# Audit Kualitas Model Eksperimen Hugging Face
+
+## Ruang lingkup dan metode
+
+Audit ini membaca kode dan artefak eksperimen yang sudah tersimpan, memuat model dari `models/huggingface_experiment/tfidf_multinomial_nb.joblib`, dan menjalankan prediksi saja. Tidak ada pemanggilan `fit`, training ulang, tuning, perubahan dataset/model/preprocessing, atau perubahan pipeline utama. Satu-satunya file yang dibuat untuk tugas audit ini adalah laporan ini.
+
+Inferensi manual memakai 46 kalimat buatan dalam bahasa Indonesia: 15 contoh aman, 15 toksik, dan 16 kontekstual. Label “diharapkan” ditetapkan untuk keperluan uji kasus ini, bukan hasil anotasi manusia. Karena itu, angka benar/salah di bawah bukan ukuran akurasi yang tervalidasi. Confidence adalah probabilitas kelas dari `predict_proba` model, bukan jaminan probabilitas prediksi benar dan tidak diuji kalibrasinya.
+
+## 1. Audit data leakage
+
+### Bukti dari kode
+
+- `src/hf_train.py`: `make_grouped_train_test_split` membentuk `X`, `y`, dan `groups`, lalu menjalankan `StratifiedGroupKFold`. Fungsi memeriksa irisan group ID dan melempar error jika ada grup pada kedua partisi.
+- `src/hf_train.py`: setelah split, hanya `train["text_processed"]` dan `train[EXPERIMENT_LABEL_COLUMN]` diberikan ke `pipeline.fit(...)`. Pipeline berisi TF-IDF dan Multinomial Naive Bayes; dengan demikian vocabulary/IDF TF-IDF dipelajari dari baris train saja.
+- `src/hf_evaluate.py`: evaluator membaca baris test yang tersimpan, memeriksa overlap grup sekali lagi, memuat model tersimpan, lalu memanggil `model.predict(...)`. Evaluator tidak memanggil `fit` atau `fit_transform`.
+- `src/hf_dataset.py`: preprocessing deterministik diterapkan pada teks sebelum split, tetapi tidak menghitung statistik global yang dipelajari dari korpus. Label asli memang dipakai untuk pemetaan label Strategi C, penyaringan baris ambigu, dan identifikasi konflik anotasi antarteks identik; label tersebut tidak dimasukkan sebagai fitur model.
+- Pemilihan fold menggunakan label untuk stratifikasi dan untuk membandingkan kedekatan distribusi kelas/ukuran test terhadap target. Tidak ditemukan pemilihan berdasarkan prediksi atau skor model pada test. Ini adalah keputusan rancangan holdout yang perlu dicatat, tetapi bukan kebocoran fitur TF-IDF ke training.
+
+### Verifikasi artefak split
+
+- Baris train: 9.115 (4.677 aman; 4.438 toksik).
+- Baris test: 2.278 (1.169 aman; 1.109 toksik).
+- Grup train: 9.013; grup test: 2.254; irisan grup: 0.
+- Train: aman 51,31%, toksik 48,69%. Test: aman 51,32%, toksik 48,68%.
+- Evaluasi tersimpan menghasilkan accuracy 0,8595 dan Macro-F1 0,8595; confusion matrix berurutan aman/toksik adalah `[[962, 207], [113, 996]]`. Angka ini konsisten dengan hitungan ulang dari model dan partisi tersimpan; tidak ada training yang dilakukan untuk audit.
+
+**Kesimpulan leakage:** tidak ditemukan indikasi kebocoran fitur atau fit TF-IDF dari test pada kode dan artefak yang diperiksa. Pemisahan grup identik di antara train dan test berhasil. Audit ini tidak membuktikan bahwa tidak ada leakage di luar file dan artefak yang diperiksa, misalnya pada sumber data eksternal lain yang tidak tercatat.
+
+## 2. Teks kosong, duplikasi, dan konflik anotasi
+
+### Dua teks kosong setelah preprocessing
+
+| Teks asli | Label mapped | Hasil dan alasan | Status |
+|---|---|---|---|
+| `#NAME?` | toksik | Token hashtag `#NAME` dibuang, tanda `?` dibuang sebagai karakter nonhuruf, sehingga tidak ada token tersisa. | `excluded_empty_after_preprocessing`; bukan train maupun test. |
+| `Ini dia yg ke 4 #Asyikm3nang` | aman | Hashtag dan angka dibuang; `yg` dinormalisasi menjadi `yang`, kemudian token tersisa dibuang oleh daftar stopword. | `excluded_empty_after_preprocessing`; bukan train maupun test. |
+
+Mengecualikan dua baris tanpa fitur teks dari model binary konsisten dengan mekanisme eligibility yang ada. Baris sumber dan label aslinya tetap dipertahankan dalam artefak mapped; tidak ada penghapusan data mentah.
+
+### Duplikasi dan grup konflik
+
+- Pengelompokan memakai teks kanonis (case-folding dan normalisasi whitespace) yang di-hash menjadi group ID, sehingga variasi kapitalisasi/spasi yang sama tetap terkelompok.
+- Ada 119 grup dengan teks berulang, mencakup 274 baris (155 baris tambahan di luar satu baris per grup). Grup berulang tetap dipertahankan; pembagian grup menempatkan seluruh anggotanya dalam partisi yang sama.
+- Train berisi 81 grup berulang (183 baris; 102 baris tambahan), test berisi 21 grup berulang (45 baris; 24 baris tambahan). Grup duplikat tidak tersebar lintas train/test, tetapi metrik dihitung per baris sehingga pengulangan dalam partisi dapat memberi bobot lebih besar pada teks tersebut.
+- Ada 8 grup dengan target binary berbeda, total 28 baris. Seluruh baris dari grup konflik diberi status `excluded_conflict` dan tidak masuk train/test. Ini menghindari pemilihan label secara diam-diam.
+- Variasi pada kolom label asli lain yang tidak mengubah target Strategi C tidak otomatis menjadi konflik target binary. Pemeriksaan konflik pipeline yang diaudit didasarkan pada jumlah nilai unik `experiment_label` per grup.
+- Split mencatat 1.746 baris ambigu, 28 baris konflik, dan 2 baris kosong sebagai excluded; 9.115 + 2.278 baris sisanya menjadi train/test.
+
+**Catatan:** grup duplikat yang berada dalam satu partisi bukan kebocoran train-test, tetapi pengulangan dalam test membuat estimasi berbasis baris tidak sepenuhnya sama dengan performa pada jumlah komentar unik.
+
+## 3. Audit pembagian train/test
+
+1. Split memakai `StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=42)`, dengan label eksperimen sebagai `y` dan group ID teks kanonis sebagai `groups`.
+2. Dari fold yang memiliki kedua kelas pada train dan test, kode memilih fold yang meminimalkan jumlah galat ukuran test terhadap 20% dan galat proporsi kelas test terhadap distribusi keseluruhan eligible. Ini memilih satu fold sebagai holdout.
+3. Seleksi mengacu pada label untuk menjaga komposisi kelas, tetapi tidak melihat skor model. Karena hanya satu holdout dari lima fold yang digunakan, hasil tidak menggantikan evaluasi lintas fold atau validasi eksternal.
+4. `random_state=42` dipakai untuk pengacakan fold. Dengan data, urutan baris, dan versi library yang sama, hasilnya deterministik; stabilitas lintas perubahan versi library atau perubahan urutan data tidak dapat dijamin.
+5. Proporsi kelas train/test sangat seimbang dan kode juga memeriksa tidak ada overlap group. Distribusi seimbang membantu perbandingan, tetapi tidak membuktikan keterwakilan domain komentar di luar dataset sumber.
+
+## 4. Prediksi manual model tersimpan
+
+`Confidence` adalah nilai kelas yang diprediksi dari `predict_proba`, dibulatkan tiga desimal. “Benar” hanya berarti prediksi cocok dengan label ekspektasi yang ditetapkan untuk contoh buatan ini.
+
+| No. | Kategori uji | Ekspektasi | Prediksi | Confidence | Hasil | Teks |
+|---:|---|---|---|---:|---|---|
+| 1 | Pujian | aman | aman | 0.719 | Benar | Karyamu bagus sekali, hasilnya rapi dan menarik. |
+| 2 | Pujian | aman | toksik | 0.711 | Salah | Kamu hebat, penjelasanmu mudah dipahami. |
+| 3 | Pujian | aman | aman | 0.679 | Benar | Desainnya keren dan enak dilihat. |
+| 4 | Terima kasih | aman | aman | 0.774 | Benar | Terima kasih banyak sudah membantu saya. |
+| 5 | Terima kasih | aman | aman | 0.601 | Benar | Makasih ya, informasinya sangat berguna. |
+| 6 | Terima kasih | aman | aman | 0.737 | Benar | Terima kasih atas waktunya, saya menghargainya. |
+| 7 | Pertanyaan biasa | aman | aman | 0.617 | Benar | Besok acara mulai jam berapa? |
+| 8 | Pertanyaan biasa | aman | aman | 0.760 | Benar | Apakah toko ini buka hari Minggu? |
+| 9 | Pertanyaan biasa | aman | aman | 0.545 | Benar | Ada yang tahu cara memperbaiki jaringan ini? |
+| 10 | Percakapan sehari-hari | aman | aman | 0.839 | Benar | Aku baru sampai rumah, jalanan tadi macet. |
+| 11 | Percakapan sehari-hari | aman | aman | 0.748 | Benar | Nanti kita makan siang bersama, ya. |
+| 12 | Percakapan sehari-hari | aman | aman | 0.746 | Benar | Hari ini cuacanya cerah sekali. |
+| 13 | Kritik sopan | aman | aman | 0.722 | Benar | Menurut saya bagian ini masih bisa diperjelas. |
+| 14 | Kritik sopan | aman | toksik | 0.544 | Salah | Presentasinya informatif, tetapi waktunya terlalu panjang. |
+| 15 | Kritik sopan | aman | aman | 0.584 | Benar | Saya kurang setuju dengan keputusan itu, alasannya belum kuat. |
+| 16 | Hinaan | toksik | toksik | 0.749 | Benar | Dasar bodoh, kamu tidak mengerti apa-apa. |
+| 17 | Hinaan | toksik | toksik | 0.727 | Benar | Kamu memang pemalas dan tidak berguna. |
+| 18 | Hinaan | toksik | toksik | 0.756 | Benar | Muka kamu jelek, jangan banyak gaya. |
+| 19 | Umpatan | toksik | toksik | 0.789 | Benar | Pergi sana, brengsek. |
+| 20 | Umpatan | toksik | toksik | 0.531 | Benar | Omonganmu memang sampah sekali. |
+| 21 | Umpatan | toksik | toksik | 0.955 | Benar | Dasar tolol, bikin kesal saja. |
+| 22 | Serangan personal | toksik | aman | 0.520 | Salah | Kamu selalu merusak suasana dan tidak punya hati. |
+| 23 | Serangan personal | toksik | toksik | 0.509 | Benar | Orang sepertimu cuma bisa menyusahkan semua orang. |
+| 24 | Serangan personal | toksik | toksik | 0.643 | Benar | Kamu memalukan dan tidak pantas dihargai. |
+| 25 | Ancaman | toksik | aman | 0.554 | Salah | Kalau kamu terus mengganggu, aku akan melaporkan dan memblokirmu. |
+| 26 | Ancaman | toksik | toksik | 0.545 | Benar | Berhenti sekarang atau saya akan mencari kamu dan membuatmu menyesal. |
+| 27 | Ancaman | toksik | aman | 0.555 | Salah | Saya akan memastikan kamu tidak bisa menyakiti orang lain lagi. |
+| 28 | Ujaran kebencian kelompok | toksik | toksik | 0.590 | Benar | Kelompok itu memang rendah dan tidak pantas tinggal di sini. |
+| 29 | Ujaran kebencian kelompok | toksik | toksik | 0.568 | Benar | Orang dari suku itu semuanya bodoh dan merusak negeri. |
+| 30 | Ujaran kebencian kelompok | toksik | aman | 0.781 | Salah | Agama mereka harus disingkirkan dari masyarakat. |
+| 31 | Sarkasme | toksik | aman | 0.522 | Salah | Wah, hebat sekali, datang terlambat lagi seperti biasa. |
+| 32 | Sarkasme | aman | aman | 0.739 | Benar | Wah, hebat sekali, kopiku tumpah tepat di atas meja. |
+| 33 | Sindiran | toksik | aman | 0.648 | Salah | Rajin sekali kamu, tugas tim dibiarkan orang lain yang mengerjakan. |
+| 34 | Sindiran | aman | aman | 0.508 | Benar | Hebat, hujan turun lagi padahal jemuran baru saja diangkat. |
+| 35 | Negasi | aman | aman | 0.692 | Benar | Saya tidak membenci siapa pun, hanya berbeda pendapat. |
+| 36 | Negasi | toksik | aman | 0.563 | Salah | Kamu tidak pernah berguna dan tidak akan berubah. |
+| 37 | Negasi | aman | aman | 0.758 | Benar | Jangan lupa membawa payung karena kemungkinan hujan. |
+| 38 | Kata kasar bercanda | aman | toksik | 0.716 | Salah | Dasar kamu ngeselin, tapi seru diajak main game. |
+| 39 | Kata kasar bercanda | aman | toksik | 0.565 | Salah | Wkwk, goblok banget aku salah masuk ruangan. |
+| 40 | Kata kasar bercanda | toksik | toksik | 0.743 | Benar | Bercanda kok, dasar sampah tidak ada yang suka sama kamu. |
+| 41 | Kata negatif tanpa serangan | aman | aman | 0.584 | Benar | Filmnya menyedihkan, tetapi akting para pemain bagus. |
+| 42 | Kata negatif tanpa serangan | aman | aman | 0.600 | Benar | Kualitas jaringan hari ini buruk dan sering terputus. |
+| 43 | Kata negatif tanpa serangan | aman | aman | 0.526 | Benar | Keputusan itu mengecewakan, tetapi kritiknya harus tetap sopan. |
+| 44 | Kritik perilaku | aman | aman | 0.610 | Benar | Saya tidak setuju dengan caramu memimpin rapat, mari kita bahas datanya. |
+| 45 | Kritik perilaku | toksik | toksik | 0.613 | Benar | Cara kerjamu payah, kamu memang manusia tidak berguna. |
+| 46 | Bahasa informal | aman | aman | 0.641 | Benar | Gak apa-apa, nanti gue kirim filenya kalau sudah selesai. |
+
+### Ringkasan uji manual
+
+| Kelompok | Benar | Total | Persentase pada contoh buatan |
+|---|---:|---:|---:|
+| Aman | 13 | 15 | 86,7% |
+| Toksik | 11 | 15 | 73,3% |
+| Kontekstual | 11 | 16 | 68,8% |
+| Total | 35 | 46 | 76,1% |
+
+## 5. Analisis kesalahan manual
+
+Empat false positive (ekspektasi aman, prediksi toksik):
+
+1. Pujian `Kamu hebat...` — kemungkinan kata `kamu` dan pola pujian singkat dipelajari sebagai fitur toksik.
+2. Kritik sopan tentang presentasi yang terlalu panjang — kata/konsep negatif dapat lebih dominan daripada konteks apresiasi dan kritik terhadap objek/perilaku.
+3. `Dasar kamu ngeselin...` — model menangkap kata negatif/serangan langsung, tetapi tidak memahami konteks akrab.
+4. `Wkwk, goblok banget aku salah masuk ruangan.` — umpatan ditujukan pada diri sendiri dan bernada bercanda; kata kasar memicu prediksi toksik.
+
+Tujuh false negative (ekspektasi toksik, prediksi aman):
+
+1. Serangan personal `...tidak punya hati` — makna serangan tersirat tidak cukup tertangkap.
+2. Kalimat tentang melaporkan dan memblokir — model memprediksi aman. Selain keterbatasan model, label ekspektasi untuk contoh ini juga ambigu karena melaporkan/memblokir dapat merupakan batasan yang wajar, bukan ancaman.
+3. Ancaman bersyarat tentang memastikan orang lain tidak menyakiti siapa pun — kemungkinan bentuk ancaman tidak menyerupai pola leksikal umum di data.
+4. Ujaran kebencian `Agama mereka harus disingkirkan...` — indikasi contoh kebencian yang lebih abstrak/berorientasi kelompok terlewat, meskipun confidence prediksi aman 0.781.
+5. Sarkasme tentang terlambat — polaritas literal positif `hebat` mungkin mendominasi konteks sindiran.
+6. Sindiran tentang tugas tim — model tidak mengaitkan konteks dan target sindiran dengan label toksik.
+7. Hinaan dengan negasi `tidak pernah berguna` — struktur negasi dan evaluasi personal belum ditangkap secara konsisten.
+
+Pada 16 contoh kontekstual, 5 salah; kategori tersebut memiliki jumlah kesalahan tertinggi dalam uji buatan ini. Contoh yang melibatkan negasi aman, kata negatif tentang benda/keputusan, serta satu bentuk bahasa informal berhasil diprediksi benar, tetapi jumlah kasusnya terlalu kecil untuk menggeneralisasi. Preprocessing mempertahankan kata negasi dan memiliki normalisasi untuk beberapa singkatan; itu tidak menjamin model memahami cakupan negasi atau slang yang tidak ada dalam kosakata normalisasi. Kritik pada perilaku/tindakan juga perlu dibedakan dari serangan terhadap orang; contoh kritik sopan tentang presentasi menjadi false positive.
+
+## 6. Kesimpulan dan langkah sebelum optimasi
+
+1. **Indikasi data leakage:** tidak ditemukan indikasi kebocoran fitur dari test atau fit TF-IDF pada test. Grup teks identik terpisah sepenuhnya antarpemisah.
+2. **Kepercayaan holdout:** cukup dapat dipercaya untuk estimasi internal pada baris eligible dari sumber yang sama, karena pemisahan grup dan proporsi kelas seimbang. Namun, ini bukan validasi eksternal; fold dipilih untuk kedekatan ukuran/distribusi, data berulang tetap memberi bobot per baris dalam partisi, dan label konflik/teks kosong dikecualikan.
+3. **Kelemahan paling terlihat:** ketergantungan pada kata/fitur leksikal, dengan kesulitan memahami konteks pragmatis: sarkasme, sindiran, negasi yang menyerang, ancaman tersirat, kebencian kelompok yang tidak eksplisit, dan umpatan bercanda atau self-directed.
+4. **Kategori yang paling sering salah dalam uji buatan:** kontekstual (5/16 salah). Ini temuan indikatif dari contoh yang sengaja disusun, bukan estimasi frekuensi kesalahan di penggunaan nyata.
+5. **Prioritas sebelum tuning:** verifikasi dan dokumentasikan pedoman label untuk ancaman, kritik, umpatan bercanda, sarkasme, serta serangan terhadap kelompok; buat set evaluasi kontekstual yang dianotasi independen oleh manusia; cek hasil per teks unik selain metrik per baris; dan ukur performa pada data terpisah yang mewakili konteks aplikasi. Baru setelah definisi target dan evaluasi tersebut stabil, lakukan optimasi/tuning.
+
+Belum dapat dipastikan dari audit ini apakah semua contoh manual mencerminkan konsensus anotator, apakah probabilitas model terkalibrasi, atau bagaimana performa pada domain komentar produksi. Tidak ada klaim bahwa skor uji manual adalah ground truth atau bahwa model siap menggantikan model utama.

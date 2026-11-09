@@ -1,0 +1,45 @@
+{
+  "dataset": "nahiar/hate_speech_detection",
+  "label_mapping": {
+    "HS=1": "toksik",
+    "HS=0 and Abusive=0": "aman",
+    "HS=0 and Abusive=1": "ambigu"
+  },
+  "tfidf_parameters": {
+    "max_features": 5000,
+    "ngram_range": [
+      1,
+      2
+    ],
+    "min_df": 1,
+    "strip_accents": "unicode"
+  },
+  "naive_bayes_parameters": {
+    "alpha": 2.0
+  },
+  "test_size_target": 0.2,
+  "random_state": 42,
+  "split_method": "StratifiedGroupKFold; one of five folds selected by class-proportion and size proximity",
+  "group_split_folds": 5,
+  "training_rows": 9115,
+  "test_rows": 2278,
+  "training_group_count": 9013,
+  "test_group_count": 2254,
+  "repeated_tweet_group_count": 119,
+  "rows_in_repeated_tweet_groups": 274,
+  "extra_duplicate_rows": 155,
+  "group_conflict_count": 8,
+  "group_conflict_rows": 28,
+  "ambiguous_rows": 1748,
+  "binary_eligible_rows": 11393,
+  "class_distribution": {
+    "train": {
+      "aman": 4677,
+      "toksik": 4438
+    },
+    "test": {
+      "aman": 1169,
+      "toksik": 1109
+    }
+  }
+}

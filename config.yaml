@@ -1,0 +1,41 @@
+data:
+  raw_path: "data/raw/dataset_github.tsv"
+  processed_path: "data/processed/dataset_preprocessed.csv"
+  clean_path: "data/processed/dataset_clean.csv"
+  text_column: "komentar_preprocessed"
+  label_column: "label"
+  valid_labels:
+    - "aman"
+    - "toksik"
+
+model:
+  output_path: "models/nlp_comment_model.joblib"
+  test_size: 0.2
+  random_state: 42
+  tfidf:
+    max_features: 5000
+    ngram_range: [1, 2]
+    min_df: 1
+    strip_accents: "unicode"
+  naive_bayes:
+    alpha: 2.0
+  cross_validation:
+    folds: 5
+    ngram_range:
+      - [1, 1]
+      - [1, 2]
+      - [1, 3]
+    min_df: [1, 2]
+    max_features: [3000, 5000]
+    alpha: [0.1, 0.5, 1.0, 2.0]
+
+reports:
+  output_dir: "reports"
+  classification_report_path: "reports/classification_report.txt"
+  metrics_path: "reports/metrics.json"
+  baseline_metrics_path: "reports/baseline_metrics.json"
+  baseline_classification_report_path: "reports/baseline_classification_report.txt"
+  confusion_matrix_path: "reports/confusion_matrix.png"
+  label_distribution_path: "reports/distribusi_label.png"
+  manual_prediction_path: "reports/manual_prediction_test.csv"
+  data_quality_audit_path: "reports/data_quality_audit.txt"

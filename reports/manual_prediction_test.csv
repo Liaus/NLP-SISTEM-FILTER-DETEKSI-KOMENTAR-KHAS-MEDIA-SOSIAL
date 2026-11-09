@@ -1,0 +1,21 @@
+﻿komentar,expected_label,predicted_label,confidence,is_correct
+kamu ganteng banget,aman,toksik,0.6403136581349519,False
+kamu cantik banget,aman,toksik,0.6403136581349519,False
+kamu baik sekali,aman,toksik,0.5881080902497662,False
+terima kasih banyak,aman,aman,0.5180808927441404,True
+"semangat terus, kamu hebat",aman,toksik,0.5469185476211497,False
+hasil karyamu sangat bagus,aman,aman,0.566998294063069,True
+saya suka dengan desain ini,aman,toksik,0.5150402789620677,False
+kamu luar biasa,aman,toksik,0.5482777785043144,False
+selamat atas pencapaiannya,aman,aman,0.5313315822364236,True
+konten ini sangat membantu,aman,aman,0.5128227746943901,True
+"dasar bodoh, tidak punya otak",toksik,toksik,0.5928667258710502,True
+muka kamu jelek sekali,toksik,toksik,0.5530893251171004,True
+kamu tidak berguna,toksik,toksik,0.6198226970067686,True
+dasar manusia sampah,toksik,toksik,0.6106956484267806,True
+lebih baik kamu diam saja,toksik,toksik,0.5754515764744473,True
+orang seperti kamu memang menyebalkan,toksik,toksik,0.6516268552546407,True
+kamu sangat memalukan,toksik,toksik,0.5680687243947412,True
+dasar tidak tahu diri,toksik,toksik,0.5645809610642044,True
+pergi saja dari sini,toksik,toksik,0.5270090914528737,True
+tidak ada yang suka denganmu,toksik,toksik,0.5275855864925963,True

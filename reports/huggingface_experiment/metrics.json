@@ -1,0 +1,89 @@
+{
+  "dataset": "nahiar/hate_speech_detection",
+  "test_rows": 2278,
+  "test_groups": 2254,
+  "split_method": "StratifiedGroupKFold; persisted test partition",
+  "accuracy": 0.8595258999122037,
+  "precision_toksik": 0.827930174563591,
+  "recall_toksik": 0.8981064021641119,
+  "f1_toksik": 0.8615916955017301,
+  "precision_macro": 0.8614069477469117,
+  "recall_macro": 0.8605159897903536,
+  "f1_macro": 0.8594945999790291,
+  "precision_by_class": {
+    "aman": 0.8948837209302326,
+    "toksik": 0.827930174563591
+  },
+  "recall_by_class": {
+    "aman": 0.8229255774165953,
+    "toksik": 0.8981064021641119
+  },
+  "f1_by_class": {
+    "aman": 0.857397504456328,
+    "toksik": 0.8615916955017301
+  },
+  "confusion_matrix_labels": [
+    "aman",
+    "toksik"
+  ],
+  "confusion_matrix": [
+    [
+      962,
+      207
+    ],
+    [
+      113,
+      996
+    ]
+  ],
+  "label_mapping": {
+    "HS=1": "toksik",
+    "HS=0 and Abusive=0": "aman",
+    "HS=0 and Abusive=1": "ambigu (excluded from binary training)"
+  },
+  "legacy_primary_reference": {
+    "accuracy": 0.7,
+    "precision_macro": 0.7556818181818181,
+    "recall_macro": 0.7,
+    "f1_macro": 0.6827262044653349,
+    "precision_by_class": {
+      "aman": 0.875,
+      "toksik": 0.6363636363636364
+    },
+    "recall_by_class": {
+      "aman": 0.4666666666666667,
+      "toksik": 0.9333333333333333
+    },
+    "f1_by_class": {
+      "aman": 0.6086956521739131,
+      "toksik": 0.7567567567567568
+    },
+    "baseline": {
+      "accuracy": 0.7,
+      "precision_macro": 0.715311004784689,
+      "recall_macro": 0.7,
+      "f1_macro": 0.6945701357466063
+    },
+    "delta_vs_baseline": {
+      "accuracy": 0.0,
+      "precision_macro": 0.04037081339712911,
+      "recall_macro": 0.0,
+      "f1_macro": -0.01184393128127137
+    },
+    "cross_validation": {
+      "cv_folds": 5,
+      "cv_best_macro_f1": 0.7595601569532343,
+      "best_params": {
+        "classifier__alpha": 2.0,
+        "tfidf__max_features": 5000,
+        "tfidf__min_df": 1,
+        "tfidf__ngram_range": [
+          1,
+          2
+        ]
+      },
+      "training_samples": 239
+    }
+  },
+  "legacy_comparison_note": "Not directly comparable: the legacy project evaluates a separate, small cyberbullying dataset with different source and label definitions."
+}

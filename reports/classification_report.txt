@@ -1,0 +1,15 @@
+              precision    recall  f1-score   support
+
+        aman       0.88      0.47      0.61        30
+      toksik       0.64      0.93      0.76        30
+
+    accuracy                           0.70        60
+   macro avg       0.76      0.70      0.68        60
+weighted avg       0.76      0.70      0.68        60
+
+
+Baseline-to-current comparison (same fixed stratified holdout):
+Accuracy: 0.7 -> 0.7000
+Macro precision: 0.715311004784689 -> 0.7557
+Macro recall: 0.7 -> 0.7000
+Macro F1: 0.6945701357466063 -> 0.6827
